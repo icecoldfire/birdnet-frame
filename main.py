@@ -4,6 +4,7 @@ import logging
 import os
 import signal
 import sys
+import threading
 import time
 from io import BytesIO
 from pathlib import Path
@@ -35,6 +36,7 @@ AUTO_SELECT_IMAGE = os.getenv("AUTO_SELECT_IMAGE", "true").lower() in (
     "true",
     "yes",
 )
+UPLOAD_TIMEOUT = int(os.getenv("UPLOAD_TIMEOUT", "300"))
 
 # Persisted so the previous image can be deleted instead of piling up on the TV across restarts
 DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
@@ -93,7 +95,29 @@ def fetch_and_upload() -> None:
         img_byte_arr = BytesIO()
         img.save(img_byte_arr, format="JPEG", quality=95)
         image_data = img_byte_arr.getvalue()
+    except requests.RequestException:
+        logger.exception("Failed to fetch source image")
+        return
+    except UnidentifiedImageError:
+        logger.exception("Fetched content is not a valid image")
+        return
+    except Exception:
+        logger.exception("Unexpected error while preparing the image")
+        return
 
+    # samsungtvws's art API is synchronous with no built-in timeout, so a hung
+    # connection could otherwise block the sync loop forever
+    thread = threading.Thread(target=_sync_to_tv, args=(image_data,), daemon=True)
+    thread.start()
+    thread.join(timeout=UPLOAD_TIMEOUT)
+    if thread.is_alive():
+        logger.error(
+            "TV upload timed out after %ss; abandoning this cycle.", UPLOAD_TIMEOUT
+        )
+
+
+def _sync_to_tv(image_data: bytes) -> None:
+    try:
         tv = SamsungTVArt(host=TV_IP, port=TV_PORT)
 
         logger.info("Uploading image to Samsung Frame TV at %s...", TV_IP)
@@ -121,13 +145,8 @@ def fetch_and_upload() -> None:
                     exc_info=True,
                 )
         save_content_id(content_id)
-
-    except requests.RequestException:
-        logger.exception("Failed to fetch source image")
-    except UnidentifiedImageError:
-        logger.exception("Fetched content is not a valid image")
     except Exception:
-        logger.exception("Unexpected error during sync")
+        logger.exception("Unexpected error while syncing to the TV")
 
 
 def main() -> None:

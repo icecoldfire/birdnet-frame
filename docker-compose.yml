@@ -1,6 +1,6 @@
 services:
   birdnet-frame:
-    image: ghcr.io/icecoldfire/birdnet-frame:main
+    image: ghcr.io/icecoldfire/birdnet-frame:latest
     container_name: birdnet-frame
     restart: unless-stopped
     env_file:
