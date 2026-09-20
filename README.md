@@ -2,11 +2,17 @@
 
 Sync a periodically updated image (e.g. a [fugleramme](https://github.com/arnegiacomo/fugleramme) bird collage) to a Samsung Frame TV's Art Mode.
 
+This project is **only** a sync bridge — it fetches whatever image `SOURCE_URL` serves and pushes it to the TV. It does not detect birds, generate art, or produce a collage itself; that part is handled entirely by the upstream source (e.g. fugleramme).
+
 A small daemon that:
 1. Fetches an image from a configurable `SOURCE_URL`.
 2. Converts it to JPEG.
 3. Uploads it to a Samsung Frame TV and sets it as the active Art Mode picture.
 4. Repeats on a configurable interval.
+
+## Why not an all-in-one solution?
+
+Several projects pair BirdNET detections with a Samsung Frame TV, but they generate their own AI illustrations or use a fixed art style (e.g. [belkins-birdnet](https://github.com/Belkins/belkins-birdnet)'s AI-generated kachō-e illustrations, or [birdframe](https://github.com/simenf/birdframe)'s stylized art on a Frame TV). [fugleramme](https://github.com/arnegiacomo/fugleramme) intentionally has no AI-generated art — it renders a live collage of the actual birds detected in your garden — but it doesn't talk to a Frame TV on its own. `birdnet-frame` exists to fill that gap: point it at a fugleramme instance (or any other image-serving endpoint) and it takes care of getting that image onto the TV.
 
 ## Requirements
 
