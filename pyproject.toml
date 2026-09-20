@@ -1,0 +1,18 @@
+[project]
+name = "birdnet-frame"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pillow>=12.3.0",
+    "requests>=2.34.2",
+    "samsungtvws>=3.0.6",
+]
+
+[dependency-groups]
+dev = [
+    "prek>=0.2.6",
+    "ruff>=0.16.8",
+    "ty>=0.0.82",
+]

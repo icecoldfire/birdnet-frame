@@ -1,0 +1,21 @@
+# Environment / secrets
+.env
+
+# Persisted runtime state
+/data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Tooling caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,9 @@
+services:
+  frame-tv-sync:
+    build: .
+    container_name: frame_tv_sync
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
