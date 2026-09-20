@@ -18,6 +18,7 @@ load_dotenv()
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO").upper(),
     format="%(asctime)s [%(levelname)s] %(message)s",
+    stream=sys.stdout,
 )
 logger = logging.getLogger(__name__)
 

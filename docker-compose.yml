@@ -1,9 +1,9 @@
 services:
-  frame-tv-sync:
-    build: .
-    container_name: frame_tv_sync
+  birdnet-frame:
+    image: ghcr.io/icecoldfire/birdnet-frame:main
+    container_name: birdnet-frame
     restart: unless-stopped
     env_file:
       - .env
     volumes:
-      - ./data:/app/data
+      - ${HOST_DATA_DIR:-./data}:/app/data

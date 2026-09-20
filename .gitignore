@@ -19,3 +19,7 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+*.tar
+*.tar.gz
+*.tgz

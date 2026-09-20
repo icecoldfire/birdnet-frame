@@ -35,6 +35,7 @@ cp .env.example .env
 | `FRAME_BACKGROUND_COLOR` | no | `#f2ede2` | Padding color used for images that don't match the frame's aspect ratio |
 | `AUTO_SELECT_IMAGE` | no  | `true`  | Whether to select the uploaded image as the active Art Mode picture |
 | `DATA_DIR`         | no       | `data`  | Directory where the last uploaded image's content id is persisted    |
+| `HOST_DATA_DIR`    | no       | `./data`| Host path mounted to `DATA_DIR` when running via Docker Compose      |
 | `LOG_LEVEL`        | no       | `INFO`  | Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)      |
 
 `TV_IP` and `SOURCE_URL` have no defaults; the daemon exits at startup if either is missing.
@@ -47,6 +48,12 @@ Only one image is kept on the TV at a time: after each successful upload, the pr
 cp .env.example .env
 # edit .env with your TV_IP and SOURCE_URL
 docker compose up -d --build
+```
+
+A prebuilt image is also published to the GitHub Container Registry on every push to `main` and on version tags (see [.github/workflows/docker-publish.yml](.github/workflows/docker-publish.yml)):
+
+```sh
+docker pull ghcr.io/icecoldfire/birdnet-frame:main
 ```
 
 View logs:
