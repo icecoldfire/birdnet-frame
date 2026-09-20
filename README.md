@@ -1,6 +1,6 @@
 # birdnet-frame
 
-Sync a periodically updated image (e.g. a BirdNET snapshot) to a Samsung Frame TV's Art Mode.
+Sync a periodically updated image (e.g. a [fugleramme](https://github.com/arnegiacomo/fugleramme) bird collage) to a Samsung Frame TV's Art Mode.
 
 A small daemon that:
 1. Fetches an image from a configurable `SOURCE_URL`.
@@ -12,7 +12,7 @@ A small daemon that:
 
 - A Samsung Frame TV with Art Mode, reachable on your local network.
 - Art Mode must be enabled/available via the network API ([samsungtvws](https://github.com/xchwarze/samsung-tv-ws-api)).
-- An HTTP endpoint that returns an image (e.g. a snapshot server, camera, or BirdNET-Pi image endpoint).
+- An HTTP endpoint that returns an image (e.g. [fugleramme](https://github.com/arnegiacomo/fugleramme), which defaults to port `8080`, a snapshot server, or a camera).
 - Docker and Docker Compose (recommended), or Python 3.13+ if running directly.
 
 ## Configuration
@@ -33,10 +33,11 @@ cp .env.example .env
 | `FRAME_WIDTH`      | no       | `3840`  | Target canvas width the image is padded to                  |
 | `FRAME_HEIGHT`     | no       | `2160`  | Target canvas height the image is padded to                 |
 | `FRAME_BACKGROUND_COLOR` | no | `#f2ede2` | Padding color used for images that don't match the frame's aspect ratio |
+| `AUTO_SELECT_IMAGE` | no  | `true`  | Whether to select the uploaded image as the active Art Mode picture |
 | `DATA_DIR`         | no       | `data`  | Directory where the last uploaded image's content id is persisted    |
 | `LOG_LEVEL`        | no       | `INFO`  | Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)      |
 
-`TV_IP` and `SOURCE_URL` have no defaults and must be set, otherwise the daemon exits with an error at startup. This avoids accidentally shipping or running with someone else's network configuration.
+`TV_IP` and `SOURCE_URL` have no defaults; the daemon exits at startup if either is missing.
 
 Only one image is kept on the TV at a time: after each successful upload, the previous image is deleted. The active image's content id is persisted under `DATA_DIR` (mounted as a volume in Docker Compose) so this still works after a container restart.
 
@@ -60,10 +61,12 @@ This project uses [uv](https://docs.astral.sh/uv/) for dependency management.
 
 ```sh
 uv sync
-export TV_IP=192.168.1.10
-export SOURCE_URL=http://192.168.1.20:8765/
+cp .env.example .env
+# edit .env with your TV_IP and SOURCE_URL
 uv run main.py
 ```
+
+A local `.env` file is loaded automatically (via [python-dotenv](https://github.com/theskumar/python-dotenv)) when present. In Docker, variables come from `env_file` in `docker-compose.yml` instead.
 
 ## Development
 
@@ -79,7 +82,3 @@ uv run prek run --all-files   # run all hooks manually
 
 - Never commit your `.env` file — it contains your local network configuration. It is excluded via [`.gitignore`](.gitignore).
 - `SOURCE_URL` is fetched with a fixed timeout and no redirect/content validation beyond image decoding; only point it at a trusted source you control.
-
-## License
-
-No license specified. Add one (e.g. MIT) before publishing if you intend for others to reuse this code.

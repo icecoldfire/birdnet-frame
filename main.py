@@ -9,8 +9,11 @@ from io import BytesIO
 from pathlib import Path
 
 import requests
+from dotenv import load_dotenv
 from PIL import Image, ImageOps, UnidentifiedImageError
 from samsungtvws.art import SamsungTVArt
+
+load_dotenv()
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO").upper(),
@@ -25,10 +28,14 @@ SYNC_INTERVAL = int(os.getenv("SYNC_INTERVAL", "3600"))
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "10"))
 FRAME_WIDTH = int(os.getenv("FRAME_WIDTH", "3840"))
 FRAME_HEIGHT = int(os.getenv("FRAME_HEIGHT", "2160"))
-# Matches the Fugleramme page's paper background so padding blends in rather than stretching the image
 FRAME_BACKGROUND_COLOR = os.getenv("FRAME_BACKGROUND_COLOR", "#f2ede2")
+AUTO_SELECT_IMAGE = os.getenv("AUTO_SELECT_IMAGE", "true").lower() in (
+    "1",
+    "true",
+    "yes",
+)
 
-# Persisted across restarts so the previously uploaded image can be deleted instead of accumulating
+# Persisted so the previous image can be deleted instead of piling up on the TV across restarts
 DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
 CONTENT_ID_FILE = DATA_DIR / "content_id.txt"
 
@@ -42,7 +49,6 @@ def _handle_shutdown_signal(signum, frame):
 
 
 def load_last_content_id() -> str | None:
-    """Read the previously uploaded image's content id, if any."""
     try:
         return CONTENT_ID_FILE.read_text().strip() or None
     except FileNotFoundError:
@@ -50,13 +56,11 @@ def load_last_content_id() -> str | None:
 
 
 def save_content_id(content_id: str) -> None:
-    """Persist the uploaded image's content id so it survives container restarts."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     CONTENT_ID_FILE.write_text(content_id)
 
 
 def validate_config() -> None:
-    """Ensure required configuration is present before starting the daemon."""
     missing = [
         name
         for name, value in (("TV_IP", TV_IP), ("SOURCE_URL", SOURCE_URL))
@@ -72,13 +76,12 @@ def validate_config() -> None:
 
 
 def fetch_and_upload() -> None:
-    """Fetch the source image and upload it to the Samsung Frame TV's Art Mode."""
     logger.info("Fetching image from %s...", SOURCE_URL)
     try:
         response = requests.get(SOURCE_URL, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
 
-        # Pad to the frame's aspect ratio instead of letting the TV stretch the image
+        # Pad instead of stretch, so non-16:9 sources aren't distorted on the TV
         img = Image.open(BytesIO(response.content)).convert("RGB")
         img = ImageOps.pad(
             img,
@@ -94,25 +97,29 @@ def fetch_and_upload() -> None:
 
         logger.info("Uploading image to Samsung Frame TV at %s...", TV_IP)
         content_id = tv.upload(image_data, matte="none", file_type="jpg")
-        if content_id:
-            tv.select_image(content_id)
-            logger.info("Successfully updated Art Mode picture.")
-
-            previous_content_id = load_last_content_id()
-            if previous_content_id and previous_content_id != content_id:
-                try:
-                    tv.delete(previous_content_id)
-                except Exception:
-                    logger.warning(
-                        "Could not delete previous image %s",
-                        previous_content_id,
-                        exc_info=True,
-                    )
-            save_content_id(content_id)
-        else:
+        if not content_id:
             logger.warning(
                 "Upload did not return a content id; image may not be active."
             )
+            return
+
+        if AUTO_SELECT_IMAGE:
+            tv.select_image(content_id)
+            logger.info("Successfully updated Art Mode picture.")
+        else:
+            logger.info("Uploaded content id %s without selecting it.", content_id)
+
+        previous_content_id = load_last_content_id()
+        if previous_content_id and previous_content_id != content_id:
+            try:
+                tv.delete(previous_content_id)
+            except Exception:
+                logger.warning(
+                    "Could not delete previous image %s",
+                    previous_content_id,
+                    exc_info=True,
+                )
+        save_content_id(content_id)
 
     except requests.RequestException:
         logger.exception("Failed to fetch source image")
